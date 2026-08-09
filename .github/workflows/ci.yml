@@ -1,6 +1,5 @@
 name: CI
 
-# Runs on every push and every pull request targeting main
 on:
   push:
     branches: [main]
@@ -12,8 +11,6 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
 
-    # All commands in this job run inside application/, since that's
-    # where package.json actually lives
     defaults:
       run:
         working-directory: application
@@ -26,10 +23,47 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-        
 
       - name: Install dependencies
         run: npm install
 
       - name: Run unit tests
         run: npm test
+
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    # This job only starts if "test" finishes successfully.
+    # This is the "fail fast, don't waste time building broken code" rule.
+    needs: test
+    # Skip this job entirely for pull requests — we only want to push
+    # real images to GHCR from actual merges to main, not from every
+    # PR someone opens.
+    if: github.event_name == 'push'
+
+    # GITHUB_TOKEN is auto-provided by GitHub Actions for every run.
+    # By default it can't push packages — this explicitly grants that
+    # one specific permission, nothing more (least privilege again).
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./application
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/devsecops-platform-app:latest
+            ghcr.io/${{ github.repository_owner }}/devsecops-platform-app:${{ github.sha }}
