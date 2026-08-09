@@ -20,3 +20,10 @@ output "cluster_role_arn" {
 output "node_role_arn" {
   value = module.iam.node_role_arn
 }
+output "cluster_name" {
+  value = module.eks.cluster_name
+}
+
+output "cluster_endpoint" {
+  value = module.eks.cluster_endpoint
+}

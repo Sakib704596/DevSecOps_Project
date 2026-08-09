@@ -15,3 +15,15 @@ module "iam" {
   project_name = var.project_name
   environment  = "dev"
 }
+module "eks" {
+  source = "../../modules/eks"
+
+  project_name = var.project_name
+  environment  = "dev"
+
+  cluster_role_arn   = module.iam.cluster_role_arn
+  node_role_arn      = module.iam.node_role_arn
+  private_subnet_ids = module.vpc.private_subnet_ids
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  depends_on = [module.vpc, module.iam]
+}
