@@ -31,19 +31,11 @@ jobs:
         run: npm test
 
   build-and-push:
-    name: Build and Push Docker Image
+    name: Build, Scan, and Push Docker Image
     runs-on: ubuntu-latest
-    # This job only starts if "test" finishes successfully.
-    # This is the "fail fast, don't waste time building broken code" rule.
     needs: test
-    # Skip this job entirely for pull requests — we only want to push
-    # real images to GHCR from actual merges to main, not from every
-    # PR someone opens.
     if: github.event_name == 'push'
 
-    # GITHUB_TOKEN is auto-provided by GitHub Actions for every run.
-    # By default it can't push packages — this explicitly grants that
-    # one specific permission, nothing more (least privilege again).
     permissions:
       contents: read
       packages: write
@@ -52,6 +44,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Lowercase the repository owner
+        id: lower
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      # ----------------------------------------------------------------
+      # BUILD ONLY — no push yet. We want the image to exist LOCALLY
+      # on this runner so Trivy can scan it, before it's allowed
+      # anywhere near the registry.
+      # ----------------------------------------------------------------
+      - name: Build image (local only, not pushed yet)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./application
+          push: false
+          load: true # loads the built image into the local Docker daemon so Trivy can see it
+          tags: |
+            ghcr.io/${{ steps.lower.outputs.owner }}/devsecops-platform-app:latest
+            ghcr.io/${{ steps.lower.outputs.owner }}/devsecops-platform-app:${{ github.sha }}
+
+      # ----------------------------------------------------------------
+      # THE ACTUAL SECURITY GATE
+      # Scans the image we just built. exit-code: '1' means Trivy will
+      # make this step FAIL (non-zero exit) if anything matching
+      # severity HIGH or CRITICAL is found — which stops the pipeline
+      # before the push step ever runs.
+      # ----------------------------------------------------------------
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ghcr.io/${{ steps.lower.outputs.owner }}/devsecops-platform-app:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true # don't fail on CVEs with no available fix yet — nothing actionable to do about those right now
+
+      # ----------------------------------------------------------------
+      # PUSH — only runs if the Trivy step above didn't fail
+      # ----------------------------------------------------------------
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -59,11 +89,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Lowercase the repository owner
-        id: lower
-        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push image
+      - name: Push image (only if scan passed)
         uses: docker/build-push-action@v6
         with:
           context: ./application
