@@ -71,7 +71,7 @@ jobs:
       # before the push step ever runs.
       # ----------------------------------------------------------------
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ steps.lower.outputs.owner }}/devsecops-platform-app:${{ github.sha }}
           format: table
