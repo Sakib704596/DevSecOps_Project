@@ -27,22 +27,27 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Run as a non-root user — a real security practice, not decoration.
-# If this container is ever compromised, the attacker doesn't get root.
+# Remove npm/npx/corepack/yarn from the final image entirely.
+# The app only needs `node` to run — these are build-time tools with
+# no business being in a production container. This directly removes
+# every vulnerability Trivy just found, because all of them lived
+# inside npm's own bundled dependencies, not our app's.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/corepack \
+           /opt/yarn-v1.22.22
+
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-# Copy only what's needed to RUN the app — node_modules and source —
-# from the builder stage, not the whole build environment.
 COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /app/app.js ./app.js
 COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
 
 EXPOSE 3000
 
-# Basic container-level health check — Docker (and later Kubernetes)
-# can use this to know if the app inside is actually responding,
-# not just "the process exists."
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
