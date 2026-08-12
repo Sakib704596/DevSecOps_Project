@@ -1,7 +1,7 @@
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const testKey = "AKIAIOSFODNN7EXAMPLE";
+const testKey = "AKIAZQ3XJ8FGH2K9P1M4";
 
 // Root endpoint — just proves the app is alive
 app.get('/', (req, res) => {
