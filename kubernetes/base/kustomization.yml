@@ -1,0 +1,6 @@
+# This file just tells Kustomize: "these are the resources that make up
+# the base configuration." Nothing more. No new syntax to learn beyond
+# this list.
+resources:
+  - deployment.yml
+  - service.yml

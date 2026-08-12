@@ -1,0 +1,23 @@
+# This is the actual new concept: an overlay points BACK at the base
+# (../../base) and layers small changes on top of it. Kustomize merges
+# these together at deploy time — the base files themselves never
+# change, no matter how many overlays reference them.
+
+resources:
+  - ../../base
+
+# Every resource from the base gets deployed into this namespace.
+# This alone is a real, useful isolation mechanism — dev/staging/prod
+# can share one cluster without their pods/services colliding.
+namespace: devsecops-dev
+
+# Prefixes every resource name — e.g. "devsecops-app" becomes
+# "dev-devsecops-app". Makes it unmistakable which environment
+# you're looking at when running kubectl get pods --all-namespaces.
+namePrefix: dev-
+
+# Common labels applied to everything from this overlay — useful for
+# later when you want to select "everything belonging to dev" at once.
+labels:
+  - pairs:
+      environment: dev
