@@ -19,6 +19,12 @@ spec:
           image: ghcr.io/sakib704596/devsecops-platform-app:latest
           ports:
             - containerPort: 3000
+          # Pulls every key in the ConfigMap in as an environment
+          # variable automatically — PORT and LOG_LEVEL both become
+          # available to the app without listing them individually here.
+          envFrom:
+            - configMapRef:
+                name: devsecops-app-config
           resources:
             requests:
               cpu: 100m

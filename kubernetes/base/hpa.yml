@@ -1,0 +1,23 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: devsecops-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: devsecops-app # must match the Deployment name in deployment.yaml
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # If average CPU usage across pods exceeds 70% of the
+          # requested amount, Kubernetes adds more pods automatically.
+          # This is the actual mechanism behind "auto scaling" —
+          # not magic, just a controller watching a metric and
+          # adjusting replica count.
+          averageUtilization: 70

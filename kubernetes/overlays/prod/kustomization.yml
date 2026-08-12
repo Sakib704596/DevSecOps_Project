@@ -1,0 +1,43 @@
+resources:
+  - ../../base
+
+namespace: devsecops-prod
+namePrefix: prod-
+
+labels:
+  - pairs:
+      environment: prod
+
+patches:
+  # Prod runs more replicas than staging, and dev — the whole point
+  # of environment-specific scaling.
+  - target:
+      kind: Deployment
+      name: devsecops-app
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 4
+
+  # Prod gets a HIGHER resource limit than the base — more headroom
+  # for real traffic, since dev/staging never see production load.
+  - target:
+      kind: Deployment
+      name: devsecops-app
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: 500m
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: 512Mi
+
+  # Prod's autoscaler ceiling is higher than the base default (5) —
+  # room to scale further under real load.
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: devsecops-app
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10

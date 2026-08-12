@@ -1,0 +1,23 @@
+resources:
+  - ../../base
+
+namespace: devsecops-staging
+namePrefix: staging-
+
+labels:
+  - pairs:
+      environment: staging
+
+# THIS is the actual new concept: a patch. Unlike dev (which only
+# renamed/namespaced things), this genuinely changes a value from
+# the base — replica count — without touching base/deployment.yaml
+# at all. The base stays the single source of truth for WHAT gets
+# deployed; overlays control HOW MANY / HOW MUCH per environment.
+patches:
+  - target:
+      kind: Deployment
+      name: devsecops-app
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3

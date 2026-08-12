@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devsecops-app-config
+data:
+  # Right now this is just PORT, but this is the PATTERN that matters:
+  # any config that might differ between environments (log level, feature
+  # flags, external API URLs) goes here, not hardcoded in the app or
+  # baked into the Docker image. Overlays can patch these values per
+  # environment without ever touching the Deployment YAML.
+  PORT: "3000"
+  LOG_LEVEL: "info"
