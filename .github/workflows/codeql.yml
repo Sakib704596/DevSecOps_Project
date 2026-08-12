@@ -1,0 +1,43 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Runs every Monday at 5:30 AM UTC — catches newly-discovered
+    # vulnerability patterns even in code that hasn't changed recently.
+    - cron: '30 5 * * 1'
+
+jobs:
+  analyze:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      security-events: write # required for CodeQL to publish findings to GitHub's Security tab
+
+    strategy:
+      matrix:
+        language: ['javascript']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Sets up CodeQL's analysis engine and points it at the language(s)
+      # we care about — here just JavaScript, since that's what the app is
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # CodeQL builds a database of your code's structure and data flow,
+      # then runs its security query suite against it. This is what
+      # actually finds things like injection risks or unsafe patterns.
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:${{ matrix.language }}'
