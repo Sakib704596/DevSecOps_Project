@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-app-staging
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Sakib704596/DevSecOps_Project.git
+    targetRevision: main
+    path: kubernetes/overlays/staging
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: devsecops-staging
+
+  # DELIBERATELY no `automated` sync policy here. This means ArgoCD
+  # tracks and validates this Application (you can see it in the UI,
+  # confirm the manifests are correct) but will NOT automatically
+  # create pods. Consistent with the Phase 3 decision: the current
+  # 2-3 node dev cluster doesn't have capacity to run dev+staging+prod
+  # simultaneously. Syncing this manually, on demand, is a conscious
+  # choice — not an oversight.
+  syncOptions:
+    - CreateNamespace=true

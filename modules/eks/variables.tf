@@ -35,12 +35,12 @@ variable "kubernetes_version" {
 variable "node_instance_types" {
   description = "t3.medium is a reasonable balance of cost vs being able to actually run real workloads"
   type        = list(string)
-  default     = ["t3.micro"]
+  default     = ["t3.small"]
 }
 
 variable "node_desired_size" {
   type    = number
-  default = 2
+  default = 4
 }
 
 variable "node_min_size" {
@@ -50,5 +50,5 @@ variable "node_min_size" {
 
 variable "node_max_size" {
   type    = number
-  default = 3
+  default = 4
 }

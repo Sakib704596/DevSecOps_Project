@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-app-dev
+  namespace: argocd # Applications themselves always live in the argocd namespace,
+                     # regardless of which namespace they DEPLOY TO
+spec:
+  project: default
+
+  # WHERE the desired state lives — this is the "source of truth" ArgoCD
+  # will continuously watch and pull from.
+  source:
+    repoURL: https://github.com/Sakib704596/DevSecOps_Project.git
+    targetRevision: main
+    path: kubernetes/overlays/dev
+
+  # WHERE that desired state should be applied — your actual cluster,
+  # in the devsecops-dev namespace we already created in Phase 3.
+  destination:
+    server: https://kubernetes.default.svc # "the cluster ArgoCD itself is running in"
+    namespace: devsecops-dev
+
+  syncPolicy:
+    automated:
+      prune: true    # if a resource is removed from Git, delete it from the cluster too
+      selfHeal: true  # if someone manually changes the live cluster, revert it back to match Git
+    syncOptions:
+      - CreateNamespace=false # namespace already exists from Phase 3, no need to recreate

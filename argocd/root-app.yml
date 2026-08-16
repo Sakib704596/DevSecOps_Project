@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: devsecops-platform-root
+  namespace: argocd
+spec:
+  project: default
+
+  # THIS is the app-of-apps pattern: instead of pointing at Kubernetes
+  # manifests (Deployments, Services), this Application's source path
+  # points at a folder containing OTHER Application definitions
+  # (dev-app.yaml, staging-app.yaml, prod-app.yaml). ArgoCD treats
+  # Application objects as just another kind of resource it can manage —
+  # so one root Application can create/manage a whole set of child
+  # Applications, giving you one place to see and control dev+staging+prod
+  # as a group, rather than applying three separate kubectl commands
+  # every time.
+  source:
+    repoURL: https://github.com/Sakib704596/DevSecOps_Project.git
+    targetRevision: main
+    path: argocd/apps
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true    # if a child Application file is removed from Git, ArgoCD removes that Application too
+      selfHeal: true  # protects the APPLICATION DEFINITIONS themselves from manual drift
