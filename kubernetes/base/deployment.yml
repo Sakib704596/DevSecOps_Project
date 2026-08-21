@@ -13,15 +13,45 @@ spec:
     metadata:
       labels:
         app: devsecops-app
+      annotations:
+        # This is the switch that tells the Vault Agent Injector to
+        # act on this pod at all. Without this, the injector ignores
+        # the pod entirely — nothing changes for pods that don't opt in.
+        vault.hashicorp.com/agent-inject: "true"
+
+        # Which Vault role this pod should authenticate as. This MUST
+        # match the role name we created earlier
+        # (auth/kubernetes/role/devsecops-app) — that role is what ties
+        # this pod's Kubernetes identity to the read-only policy.
+        vault.hashicorp.com/role: "devsecops-app"
+
+        # This is the actual secret-fetch instruction. The format is:
+        # vault.hashicorp.com/agent-inject-secret-<FILENAME>: <VAULT PATH>
+        # The injector will create a file at
+        # /vault/secrets/app-credentials inside the pod, containing
+        # whatever Vault returns from secret/data/devsecops-app.
+        vault.hashicorp.com/agent-inject-secret-app-credentials: "secret/data/devsecops-app"
+
+        # By default the injected file is raw JSON. This template makes
+        # it plain KEY=VALUE lines instead — easier for the app (or a
+        # human debugging with `cat`) to actually read.
+        vault.hashicorp.com/agent-inject-template-app-credentials: |
+          {{- with secret "secret/data/devsecops-app" -}}
+          username={{ .Data.data.username }}
+          password={{ .Data.data.password }}
+          {{- end -}}
     spec:
+      # Must match bound_service_account_names in the Vault role.
+      # "default" is what we configured, and it's also what pods use
+      # automatically if nothing else is specified — so this line is
+      # here for clarity, not strictly required.
+      serviceAccountName: default
+
       containers:
         - name: devsecops-app
           image: ghcr.io/sakib704596/devsecops-platform-app:latest
           ports:
             - containerPort: 3000
-          # Pulls every key in the ConfigMap in as an environment
-          # variable automatically — PORT and LOG_LEVEL both become
-          # available to the app without listing them individually here.
           envFrom:
             - configMapRef:
                 name: devsecops-app-config
