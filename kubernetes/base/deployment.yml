@@ -6,6 +6,18 @@ metadata:
     app: devsecops-app
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # maxUnavailable: how many pods can be DOWN at once during the
+      # rollout. 0 means: never drop below the full replica count —
+      # a new pod must be ready before an old one is removed. This is
+      # the actual setting that guarantees zero dropped capacity.
+      maxUnavailable: 0
+      # maxSurge: how many EXTRA pods can exist temporarily beyond the
+      # normal replica count while rolling out. 1 means Kubernetes can
+      # briefly run 3 pods (2 old + 1 new) before removing an old one.
+      maxSurge: 1
   selector:
     matchLabels:
       app: devsecops-app
@@ -14,39 +26,16 @@ spec:
       labels:
         app: devsecops-app
       annotations:
-        # This is the switch that tells the Vault Agent Injector to
-        # act on this pod at all. Without this, the injector ignores
-        # the pod entirely — nothing changes for pods that don't opt in.
         vault.hashicorp.com/agent-inject: "true"
-
-        # Which Vault role this pod should authenticate as. This MUST
-        # match the role name we created earlier
-        # (auth/kubernetes/role/devsecops-app) — that role is what ties
-        # this pod's Kubernetes identity to the read-only policy.
         vault.hashicorp.com/role: "devsecops-app"
-
-        # This is the actual secret-fetch instruction. The format is:
-        # vault.hashicorp.com/agent-inject-secret-<FILENAME>: <VAULT PATH>
-        # The injector will create a file at
-        # /vault/secrets/app-credentials inside the pod, containing
-        # whatever Vault returns from secret/data/devsecops-app.
         vault.hashicorp.com/agent-inject-secret-app-credentials: "secret/data/devsecops-app"
-
-        # By default the injected file is raw JSON. This template makes
-        # it plain KEY=VALUE lines instead — easier for the app (or a
-        # human debugging with `cat`) to actually read.
         vault.hashicorp.com/agent-inject-template-app-credentials: |
           {{- with secret "secret/data/devsecops-app" -}}
           username={{ .Data.data.username }}
           password={{ .Data.data.password }}
           {{- end -}}
     spec:
-      # Must match bound_service_account_names in the Vault role.
-      # "default" is what we configured, and it's also what pods use
-      # automatically if nothing else is specified — so this line is
-      # here for clarity, not strictly required.
       serviceAccountName: default
-
       containers:
         - name: devsecops-app
           image: ghcr.io/sakib704596/devsecops-platform-app:latest
